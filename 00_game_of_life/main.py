@@ -103,7 +103,7 @@ async def put():
 
 @rt("/reset")
 async def put():
-    game_state['grid'] = [[0 for _ in range(20)] for _ in range(20)]
+    game_state['grid'] = init_grid
     game_state['running'] = False
     await update_players()
 
