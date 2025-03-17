@@ -13,7 +13,7 @@ if __name__ == "__main__": sys.exit("Run this app with `uvicorn main:app`")
 
 css = Style('''
     body, html { height: 100%; margin: 0; }
-    body { display: flex; flex-direction: column; }
+    body { display: flex; flex-direction: column; background-color: #f4ecd8}
     main { flex: 1 0 auto; }
     footer { flex-shrink: 0; padding: 10px; text-align: center; background-color: #333; color: white; }
     footer a { color: #9cf; }
