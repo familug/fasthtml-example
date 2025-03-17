@@ -2,6 +2,13 @@ from fasthtml.common import *
 import asyncio
 import sys
 
+import math
+# UTCTF 2025 https://ctftime.org/event/2641
+#  Streamified
+#
+# Apparently I'm supposed to scan this or something... but I don't really get it.
+secret = "1111111000011110101111111100000100110101100100000110111010110110111010111011011101010101001101011101101110101001010010101110110000010100101111010000011111111010101010101111111000000001011110100000000010111110001110110011111000111010101100000010100000100011110111100101110111100000100001010100010000011000001000000001011011111100010001010111011100011010100010101001111100110111011100001001100110000011100001100110101011111111100000000110000001000110101111111001111001101010011100000101101001010001000010111010111100011111111011011101011001110011010011101110101010011110010010110000010011011001011100011111111010101010000010111"
+step = math.isqrt(len(secret))
 if __name__ == "__main__": sys.exit("Run this app with `uvicorn main:app`")
 
 css = Style('''
@@ -10,19 +17,23 @@ css = Style('''
     main { flex: 1 0 auto; }
     footer { flex-shrink: 0; padding: 10px; text-align: center; background-color: #333; color: white; }
     footer a { color: #9cf; }
-    #grid { display: grid; grid-template-columns: repeat(20, 20px); grid-template-rows: repeat(20, 20px);gap: 1px; }
-    .cell { width: 20px; height: 20px; border: 1px solid black; }
-    .alive { background-color: green; }
+    #grid { display: grid; grid-template-columns: repeat(20, 20px); grid-template-rows: repeat(20, 20px);gap: 0px; }
+    .cell { width: 20px; height: 20px; border: 0px solid black; }
+    .alive { background-color: black; }
     .dead { background-color: white; }
-''')
+'''.replace("repeat(20", f"repeat({step}"))
+
 gridlink = Link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/flexboxgrid/6.3.1/flexboxgrid.min.css", type="text/css")
 htmx_ws = Script(src="https://unpkg.com/htmx-ext-ws@2.0.0/ws.js")
 app = FastHTML(hdrs=(picolink, gridlink, css, htmx_ws))
 rt = app.route
 
-game_state = {'running': False, 'grid': [[0 for _ in range(20)] for _ in range(20)]}
+init_grid = [[int(c) for c in secret[i:i+step]] for i in range(0, len(secret), step)]
+
+game_state = {'running': False, 'grid': init_grid}
+
 def update_grid(grid: list[list[int]]) -> list[list[int]]:
-    new_grid = [[0 for _ in range(20)] for _ in range(20)]
+    new_grid = [[0 for _ in range(step)] for _ in range(step)]
     def count_neighbors(x, y):
         directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
         count = 0
@@ -53,7 +64,7 @@ def Home():
     run_btn = Button('Run', id='run', cls='col-xs-2', hx_put='/run', hx_target='#gol', hx_swap='none')
     pause_btn = Button('Pause', id='pause', cls='col-xs-2', hx_put='/pause', hx_target='#gol', hx_swap='none')
     reset_btn = Button('Reset', id='reset', cls='col-xs-2', hx_put='/reset', hx_target='#gol', hx_swap='none')
-    main = Main(gol, Div(run_btn, pause_btn, reset_btn, cls='row center-xs'), hx_ext="ws", ws_connect="/gol")
+    main = Main(gol, Div(P("")), Div(run_btn, pause_btn, reset_btn, cls='row center-xs'), hx_ext="ws", ws_connect="/gol")
     footer = Footer(P('Made by Nathan Cooper. Check out the code', AX('here', href='https://github.com/AnswerDotAI/fasthtml-example/tree/main/game_of_life', target='_blank')))
     return Title('Game of Life'), main, footer
 
