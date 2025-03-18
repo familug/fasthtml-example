@@ -17,8 +17,8 @@ css = Style('''
     main { flex: 1 0 auto; }
     footer { flex-shrink: 0; padding: 10px; text-align: center; background-color: #333; color: white; }
     footer a { color: #9cf; }
-    #grid { display: grid; grid-template-columns: repeat(20, 20px); grid-template-rows: repeat(20, 20px);gap: 0px; }
-    .cell { width: 20px; height: 20px; border: 0px solid black; }
+    #grid { display: grid; grid-template-columns: repeat(20, 10px); grid-template-rows: repeat(20, 10px);gap: 0px; }
+    .cell { width: 10px; height: 10px; border: 0px solid black; }
     .alive { background-color: black; }
     .dead { background-color: white; }
 '''.replace("repeat(20", f"repeat({step}"))
@@ -28,6 +28,8 @@ htmx_ws = Script(src="https://unpkg.com/htmx-ext-ws@2.0.0/ws.js")
 app = FastHTML(hdrs=(picolink, gridlink, css, htmx_ws))
 rt = app.route
 
+ONLINE = 0
+GEN = 1
 init_grid = [[int(c) for c in secret[i:i+step]] for i in range(0, len(secret), step)]
 
 game_state = {'running': False, 'grid': init_grid}
@@ -57,7 +59,7 @@ def Grid():
             cell_class = 'alive' if cell else 'dead'
             cell = Div(cls=f'cell {cell_class}', hx_put='/update', hx_vals={'x': x, 'y': y}, hx_swap='none', hx_target='#gol', hx_trigger='click')
             cells.append(cell)
-    return Div(*cells, id='grid')
+    return Div(P(f"Online now: {ONLINE}"), P(f"Generation: {GEN}"), Div(*cells, id='grid'), id='grid-wrapper')
 
 def Home():
     gol = Div(Grid(), id='gol', cls='row center-xs')
@@ -65,7 +67,7 @@ def Home():
     pause_btn = Button('Pause', id='pause', cls='col-xs-2', hx_put='/pause', hx_target='#gol', hx_swap='none')
     reset_btn = Button('Reset', id='reset', cls='col-xs-2', hx_put='/reset', hx_target='#gol', hx_swap='none')
     main = Main(gol, Div(P("")), Div(run_btn, pause_btn, reset_btn, cls='row center-xs'), hx_ext="ws", ws_connect="/gol")
-    footer = Footer(P('Made by Nathan Cooper. Check out the code', AX('here', href='https://github.com/AnswerDotAI/fasthtml-example/tree/main/game_of_life', target='_blank')))
+    footer = Footer(P('Made by Nathan Cooper. Enhanced by HVN. Check out the code ', AX('here', href='https://github.com/familug/fasthtml-example/tree/main/00_game_of_life', target='_blank')))
     return Title('Game of Life'), main, footer
 
 @rt('/')
@@ -74,10 +76,18 @@ def get(): return Home()
 player_queue = []
 async def update_players():
     for i, player in enumerate(player_queue):
-        try: await player(Grid())
+        try:
+            await player(Grid())
         except: player_queue.pop(i)
-async def on_connect(send): player_queue.append(send)
-async def on_disconnect(send): await update_players()
+async def on_connect(send):
+    global ONLINE
+    ONLINE += 1
+    player_queue.append(send)
+
+async def on_disconnect(send):
+    global ONLINE
+    ONLINE -= 1
+    await update_players()
 
 @app.ws('/gol', conn=on_connect, disconn=on_disconnect)
 async def ws(msg:str, send): pass
@@ -86,6 +96,8 @@ async def background_task():
     while True:
         if game_state['running'] and len(player_queue) > 0:
             game_state['grid'] = update_grid(game_state['grid'])
+            global GEN
+            GEN += 1
             await update_players()
         await asyncio.sleep(1.0)
 
@@ -105,6 +117,8 @@ async def put():
 async def put():
     game_state['grid'] = init_grid
     game_state['running'] = False
+    global GEN
+    GEN = 1
     await update_players()
 
 @rt('/pause')
