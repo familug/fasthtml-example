@@ -94,7 +94,7 @@ async def ws(msg:str, send): pass
 
 async def background_task():
     while True:
-        if game_state['running'] and len(player_queue) > 0:
+        if ONLINE > 0 and game_state['running'] and len(player_queue) > 0:
             game_state['grid'] = update_grid(game_state['grid'])
             global GEN
             GEN += 1
